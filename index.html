@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ash Prayer Counter - 亚亚念诵计数器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            overflow: hidden;
+            padding-bottom: 80px; /* 为底部按钮留出空间 */
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .counter-display {
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .touch-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            touch-action: manipulation;
+            background: rgba(255, 255, 255, 0.05);
+            transition: background 0.2s ease;
+        }
+
+        .touch-area:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tap-text {
+            font-size: 48px;
+            font-weight: 600;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .touch-area:active .tap-text {
+            transform: scale(0.95);
+            opacity: 1;
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple-animation 0.6s ease-out;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .controls {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            gap: 8px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .control-btn {
+            padding: 10px 18px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: 2px solid white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .lang-switch:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 480px) {
+            .app-title {
+                font-size: 20px;
+            }
+            
+            .tap-text {
+                font-size: 36px;
+            }
+            
+            .counter-display {
+                font-size: 48px;
+            }
+            
+            .control-btn {
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="lang-switch" onclick="toggleLanguage()">中/EN</button>
+        <h1 class="app-title" data-en="Ash Prayer Counter" data-zh="亚亚念诵计数器">Ash Prayer Counter</h1>
+        <div class="counter-display" id="counter">0</div>
+    </div>
+    
+    <div class="touch-area" onclick="increment(event)">
+        <div class="tap-text">
+            <span data-en="TAP" data-zh="轻触">TAP</span>
+        </div>
+        <div style="position: absolute; bottom: 100px; opacity: 0.6; font-size: 16px;">
+            <span data-en="Tap anywhere in this area" data-zh="轻触此区域任意位置">Tap anywhere in this area</span>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="reset()" data-en="Reset" data-zh="重置">Reset</button>
+        <button class="control-btn" onclick="setTarget()" data-en="Set Target" data-zh="设定目标">Set Target</button>
+        <button class="control-btn" onclick="showHistory()" data-en="History" data-zh="历史记录">History</button>
+    </div>
+
+    <script>
+        let count = 0;
+        let targetCount = 108; // Default target
+        let currentLang = 'en';
+        let history = [];
+
+        // Load saved data
+        function loadData() {
+            const savedCount = localStorage.getItem('prayerCount');
+            const savedTarget = localStorage.getItem('targetCount');
+            const savedLang = localStorage.getItem('language');
+            const savedHistory = localStorage.getItem('history');
+            
+            if (savedCount) count = parseInt(savedCount);
+            if (savedTarget) targetCount = parseInt(savedTarget);
+            if (savedLang) currentLang = savedLang;
+            if (savedHistory) history = JSON.parse(savedHistory);
+            
+            updateDisplay();
+            updateLanguage();
+        }
+
+        // Save data
+        function saveData() {
+            localStorage.setItem('prayerCount', count);
+            localStorage.setItem('targetCount', targetCount);
+            localStorage.setItem('language', currentLang);
+            localStorage.setItem('history', JSON.stringify(history));
+        }
+
+        // Play sound effect
+        function playSound() {
+            try {
+                // Create a simple beep sound using Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Play 5 sets of double beeps (滴滴) before the congratulations message
+                for (let i = 0; i < 5; i++) {
+                    // First beep of the pair
+                    setTimeout(() => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.value = 800; // Frequency in Hz
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                        
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.15);
+                    }, i * 600); // 600ms between each pair
+                    
+                    // Second beep of the pair
+                    setTimeout(() => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.value = 800; // Frequency in Hz
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                        
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.15);
+                    }, i * 600 + 200); // 200ms after the first beep
+                }
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        // Increment counter
+        function increment(event) {
+            count++;
+            updateDisplay();
+            saveData();
+            
+            // Create ripple effect at click position
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            const touchArea = document.querySelector('.touch-area');
+            const rect = touchArea.getBoundingClientRect();
+            const size = 20;
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (event.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (event.clientY - rect.top - size / 2) + 'px';
+            ripple.style.position = 'absolute';
+            touchArea.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+            
+            // Vibrate if available
+            if ('vibrate' in navigator) {
+                navigator.vibrate(10);
+            }
+            
+            // Check if target reached
+            if (count === targetCount) {
+                // Play sound first
+                playSound();
+                
+                setTimeout(() => {
+                    const msg = currentLang === 'en' 
+                        ? `Congratulations! You've reached your target of ${targetCount}!` 
+                        : `恭喜！您已达到 ${targetCount} 次的目标！`;
+                    if (confirm(msg)) {
+                        saveToHistory();
+                        count = 0;
+                        updateDisplay();
+                        saveData();
+                    }
+                }, 3200); // Wait for 5 sets of beeps to complete (5 * 600ms + some buffer)
+            }
+        }
+
+        // Update display
+        function updateDisplay() {
+            document.getElementById('counter').textContent = count;
+        }
+
+        // Reset counter
+        function reset() {
+            if (count > 0) {
+                const msg = currentLang === 'en' 
+                    ? 'Are you sure you want to reset the counter?' 
+                    : '确定要重置计数器吗？';
+                if (confirm(msg)) {
+                    if (count > 0) saveToHistory();
+                    count = 0;
+                    updateDisplay();
+                    saveData();
+                }
+            }
+        }
+
+        // Set target
+        function setTarget() {
+            const msg = currentLang === 'en' 
+                ? `Enter target count (current: ${targetCount}):` 
+                : `输入目标次数（当前：${targetCount}）：`;
+            const input = prompt(msg, targetCount);
+            if (input && !isNaN(input) && parseInt(input) > 0) {
+                targetCount = parseInt(input);
+                saveData();
+                const confirmMsg = currentLang === 'en' 
+                    ? `Target set to ${targetCount}` 
+                    : `目标已设为 ${targetCount} 次`;
+                alert(confirmMsg);
+            }
+        }
+
+        // Save to history
+        function saveToHistory() {
+            if (count > 0) {
+                history.push({
+                    count: count,
+                    date: new Date().toLocaleString(),
+                    target: targetCount
+                });
+                // Keep only last 50 records
+                if (history.length > 50) {
+                    history = history.slice(-50);
+                }
+                saveData();
+            }
+        }
+
+        // Show history
+        function showHistory() {
+            if (history.length === 0) {
+                const msg = currentLang === 'en' ? 'No history yet' : '暂无历史记录';
+                alert(msg);
+                return;
+            }
+            
+            const title = currentLang === 'en' ? 'History (Last 10)' : '历史记录（最近10条）';
+            let msg = title + '\n\n';
+            
+            history.slice(-10).reverse().forEach(item => {
+                const dateLabel = currentLang === 'en' ? 'Date' : '日期';
+                const countLabel = currentLang === 'en' ? 'Count' : '次数';
+                const targetLabel = currentLang === 'en' ? 'Target' : '目标';
+                msg += `${dateLabel}: ${item.date}\n${countLabel}: ${item.count} / ${targetLabel}: ${item.target}\n\n`;
+            });
+            
+            alert(msg);
+        }
+
+        // Toggle language
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            updateLanguage();
+            saveData();
+        }
+
+        // Update language
+        function updateLanguage() {
+            document.querySelectorAll('[data-en]').forEach(elem => {
+                elem.textContent = elem.getAttribute(`data-${currentLang}`);
+            });
+        }
+
+        // Initialize
+        loadData();
+        
+        // Prevent pull-to-refresh on mobile
+        let lastY = 0;
+        document.addEventListener('touchstart', e => {
+            lastY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchmove', e => {
+            const y = e.touches[0].clientY;
+            const scrolling = y > lastY && window.scrollY === 0;
+            if (scrolling) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
