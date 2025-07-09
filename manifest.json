@@ -143,6 +143,8 @@
       ]
     }
   ],
+  "version": "1.0.1",
+  "version_code": 2,
   "prefer_related_applications": false,
   "related_applications": [],
   "share_target": {
